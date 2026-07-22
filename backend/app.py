@@ -1,309 +1,187 @@
-"""
-Football Stats Explorer - Streamlit Frontend
-Built with Python + Streamlit
-"""
-
 import streamlit as st
+import pandas as pd
 from db import (
-    search_player,
-    get_all_leagues,
-    get_league_table,
-    get_fixtures,
-    get_top_scorers,
+    search_player, 
+    get_league_table, 
+    get_top_scorers, 
     get_top_assisters,
+    get_all_leagues,
     get_awards
 )
 
-# Page config
+# Set page config
 st.set_page_config(
     page_title="Football Stats Explorer",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_icon="⚽",
+    layout="wide"
 )
 
-# Custom styling
-st.markdown("""
-    <style>
-    .title-text {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# ==================== APP HEADER ====================
+# Title
 st.title("⚽ Football Stats Explorer")
-st.markdown("Explore player stats, league tables, and fixtures from 5 major European leagues")
+st.write("Search players, browse league tables, and explore awards from top European leagues")
 
-# Sidebar navigation
-page = st.sidebar.selectbox(
-    "📍 Choose Page:",
-    ["Home", "Player Search", "League Tables", "Fixtures", "Awards"]
+# Sidebar for navigation
+page = st.sidebar.radio(
+    "Select Page:",
+    ["🔍 Player Search", "📊 League Tables", "🏆 Awards & Top Scorers"]
 )
 
-# ==================== HOME PAGE ====================
-if page == "Home":
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.header("Welcome to Football Stats Explorer")
-        
-        st.write("""
-        This app gives you instant access to football statistics from the top 5 European leagues:
-        
-        🏴󠁧󠁢󠁥󠁮󠁧󠁿 **Premier League** (England)
-        🇪🇸 **La Liga** (Spain)
-        🇮🇹 **Serie A** (Italy)
-        🇩🇪 **Bundesliga** (Germany)
-        🇫🇷 **Ligue 1** (France)
-        
-        ### Features:
-        - 🔍 **Player Search** - Find any player and see their complete statistics
-        - 📊 **League Tables** - Current standings for all 5 leagues
-        - ⚽ **Fixtures** - Upcoming matches and recent results
-        - 🏆 **Awards** - Top scorers, assist makers, and achievements
-        
-        ### How to use:
-        1. Select a page from the menu on the left
-        2. Enter search criteria or select from dropdowns
-        3. Click the button to view results
-        4. Explore the data!
-        """)
-    
-    with col2:
-        st.metric("Leagues", "5")
-        st.metric("Players", "50+")
-        st.metric("Matches", "50+")
-        st.metric("Awards", "20+")
-
-# ==================== PLAYER SEARCH PAGE ====================
-elif page == "Player Search":
-    st.header("🔍 Player Search")
-    st.write("Search for any player and view their detailed statistics")
+# PAGE 1: PLAYER SEARCH
+if page == "🔍 Player Search":
+    st.header("Search Players")
     
     # Search input
-    col1, col2 = st.columns([3, 1])
+    search_name = st.text_input("Enter player name:", placeholder="e.g., Haaland, Salah, Benzema")
     
-    with col1:
-        player_name = st.text_input(
-            "Enter player name:",
-            placeholder="e.g., Haaland, Salah, Benzema",
-            key="player_search"
-        )
-    
-    with col2:
-        search_button = st.button("🔎 Search", use_container_width=True, key="search_btn")
-    
-    if search_button:
-        if player_name.strip():
-            results = search_player(player_name)
+    if search_name:
+        # Search in database
+        results = search_player(search_name)
+        
+        if results:
+            st.success(f"Found {len(results)} player(s)")
             
-            if results:
-                st.success(f"✅ Found {len(results)} player(s) matching '{player_name}'")
-                st.divider()
-                
-                for idx, player in enumerate(results):
-                    # Player info
-                    col1, col2, col3 = st.columns(3)
+            # Display each result
+            for player in results:
+                with st.container():
+                    col1, col2 = st.columns(2)
                     
                     with col1:
-                        st.subheader(player[1])
+                        st.subheader(player[1])  # Player name
                         st.write(f"**Team:** {player[2]}")
-                        st.write(f"**League:** {player[10]}")
+                        st.write(f"**Position:** {player[3]}")
+                        st.write(f"**Nationality:** {player[7]}")
+                        st.write(f"**Age:** {player[8]}")
                     
                     with col2:
-                        st.write(f"**Position:** {player[3]}")
-                        st.write(f"**Age:** {player[8]}")
-                        st.write(f"**Nationality:** {player[7]}")
-                    
-                    with col3:
+                        st.write(f"**League:** {player[10]}")
                         st.write(f"**Goals:** {player[4]}")
                         st.write(f"**Assists:** {player[5]}")
                         st.write(f"**Appearances:** {player[6]}")
                         st.write(f"**Rating:** {player[9]}")
                     
-                    if idx < len(results) - 1:
-                        st.divider()
-            else:
-                st.warning(f"❌ No players found matching '{player_name}'. Try another name.")
+                    st.divider()
         else:
-            st.info("ℹ️ Please enter a player name to search")
+            st.warning("No players found. Try searching for: Haaland, Salah, Benzema, Mbappé, etc.")
 
-# ==================== LEAGUE TABLES PAGE ====================
-elif page == "League Tables":
-    st.header("📊 League Standings")
-    st.write("Current standings for all 5 major European leagues")
-    st.divider()
+
+# PAGE 2: LEAGUE TABLES
+elif page == "📊 League Tables":
+    st.header("League Standings")
     
     # Get all leagues
     leagues = get_all_leagues()
     
-    # League selector
-    col1, col2 = st.columns([3, 1])
+    # Select league
+    selected_league = st.selectbox("Select a league:", leagues)
     
-    with col1:
-        selected_league = st.selectbox(
-            "Select League:",
-            leagues,
-            key="league_select"
-        )
-    
-    with col2:
-        show_button = st.button("📋 Show Table", use_container_width=True, key="show_table_btn")
-    
-    if show_button:
+    if selected_league:
+        # Get standings
         standings = get_league_table(selected_league)
         
-        if standings:
-            st.success(f"✅ {selected_league} Standings")
-            st.divider()
-            
-            # Format data for table
-            table_data = []
-            for row in standings:
-                table_data.append({
-                    "Pos": row[3],
-                    "Team": row[4],
-                    "P": row[5],
-                    "W": row[6],
-                    "D": row[7],
-                    "L": row[8],
-                    "GF": row[9],
-                    "GA": row[10],
-                    "GD": row[9] - row[10],
-                    "Pts": row[11]
+        if standings and len(standings) > 0:
+            # Create list of dictionaries for DataFrame
+            data_list = []
+            for standing in standings:
+                # standing is a tuple: (id, league, position, team, played, wins, draws, losses, gf, ga, points)
+                data_list.append({
+                    'Position': standing[2],
+                    'Team': standing[3],
+                    'Played': standing[4],
+                    'Wins': standing[5],
+                    'Draws': standing[6],
+                    'Losses': standing[7],
+                    'Points': standing[10]
                 })
             
-            st.table(table_data)
+            df = pd.DataFrame(data_list)
             
-            st.caption("P=Played, W=Wins, D=Draws, L=Losses, GF=Goals For, GA=Goals Against, GD=Goal Difference, Pts=Points")
+            st.write(f"### {selected_league}")
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            
+            # Summary stats
+            if len(df) > 0:
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Top Team", df.iloc[0]['Team'], int(df.iloc[0]['Points']))
+                col2.metric("Matches Played", int(df.iloc[0]['Played']))
+                col3.metric("Total Teams", len(df))
         else:
-            st.warning("❌ No data found for this league")
+            st.warning("No standings found for this league.")
 
-# ==================== FIXTURES PAGE ====================
-elif page == "Fixtures":
-    st.header("⚽ Matches & Fixtures")
-    st.write("Upcoming and recent matches from all leagues")
+
+# PAGE 3: AWARDS & TOP SCORERS
+elif page == "🏆 Awards & Top Scorers":
+    st.header("Awards, Top Scorers & Assist Makers")
+    
+    # Get leagues for filtering
+    leagues = get_all_leagues()
+    selected_league = st.selectbox("Select league (or view all):", ["All"] + leagues)
+    
+    # TOP SCORERS
+    st.subheader("🔥 Top Scorers")
+    
+    if selected_league == "All":
+        top_scorers = get_top_scorers()
+    else:
+        top_scorers = get_top_scorers(selected_league)
+    
+    if top_scorers and len(top_scorers) > 0:
+        scorers_list = []
+        for rank, scorer in enumerate(top_scorers, 1):
+            scorers_list.append({
+                'Rank': rank,
+                'Player': scorer[0],
+                'Team': scorer[1],
+                'Goals': scorer[2]
+            })
+        scorers_df = pd.DataFrame(scorers_list)
+        st.dataframe(scorers_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No scorers found.")
+    
     st.divider()
     
-    if st.button("📅 Show All Matches", use_container_width=True, key="show_fixtures_btn"):
-        fixtures = get_fixtures()
-        
-        if fixtures:
-            st.success(f"✅ Found {len(fixtures)} matches")
-            st.divider()
-            
-            for idx, fixture in enumerate(fixtures):
-                # Match details
-                col1, col2, col3 = st.columns([2, 1, 2])
-                
-                with col1:
-                    st.write(f"**🏠 {fixture[1]}**")
-                
-                with col2:
-                    st.write("**vs**")
-                
-                with col3:
-                    st.write(f"**🏃 {fixture[2]}**")
-                
-                # Match info
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.caption(f"📅 {fixture[3]}")
-                
-                with col2:
-                    st.caption(f"🎯 {fixture[4]}")
-                
-                with col3:
-                    st.caption(f"⚽ {fixture[5]}")
-                
-                with col4:
-                    pass
-                
-                if idx < len(fixtures) - 1:
-                    st.divider()
-        else:
-            st.warning("❌ No fixtures found")
-
-# ==================== AWARDS PAGE ====================
-elif page == "Awards":
-    st.header("🏆 Awards & Achievements")
-    st.write("Top scorers, assist makers, and special awards")
+    # TOP ASSIST MAKERS
+    st.subheader("⚡ Top Assist Makers")
+    
+    if selected_league == "All":
+        top_assisters = get_top_assisters()
+    else:
+        top_assisters = get_top_assisters(selected_league)
+    
+    if top_assisters and len(top_assisters) > 0:
+        assisters_list = []
+        for rank, assister in enumerate(top_assisters, 1):
+            assisters_list.append({
+                'Rank': rank,
+                'Player': assister[0],
+                'Team': assister[1],
+                'Assists': assister[2]
+            })
+        assisters_df = pd.DataFrame(assisters_list)
+        st.dataframe(assisters_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No assist makers found.")
+    
     st.divider()
     
-    # Award type selector
-    award_type = st.selectbox(
-        "Select Award Type:",
-        ["Top Scorers", "Top Assisters", "All Awards"],
-        key="award_select"
-    )
+    # AWARDS
+    st.subheader("🏅 Awards & Achievements")
     
-    if st.button("🏆 Show Awards", use_container_width=True, key="show_awards_btn"):
-        
-        if award_type == "Top Scorers":
-            st.subheader("⚽ Top Goal Scorers (All Leagues)")
-            st.divider()
-            
-            scorers = get_top_scorers()
-            
-            table_data = []
-            for i, scorer in enumerate(scorers, 1):
-                table_data.append({
-                    "Rank": i,
-                    "Player": scorer[0],
-                    "Team": scorer[1],
-                    "Goals": scorer[2],
-                    "League": scorer[3]
-                })
-            
-            st.table(table_data)
-        
-        elif award_type == "Top Assisters":
-            st.subheader("🎯 Top Assist Makers (All Leagues)")
-            st.divider()
-            
-            assisters = get_top_assisters()
-            
-            table_data = []
-            for i, assister in enumerate(assisters, 1):
-                table_data.append({
-                    "Rank": i,
-                    "Player": assister[0],
-                    "Team": assister[1],
-                    "Assists": assister[2],
-                    "League": assister[3]
-                })
-            
-            st.table(table_data)
-        
-        else:  # All Awards
-            st.subheader("🌟 All Awards & Achievements")
-            st.divider()
-            
-            all_awards = get_awards()
-            
-            table_data = []
-            for award in all_awards:
-                table_data.append({
-                    "Award": award[1],
-                    "Player": award[2],
-                    "Season": award[3],
-                    "League": award[4]
-                })
-            
-            st.table(table_data)
+    awards = get_awards()
+    
+    if awards and len(awards) > 0:
+        awards_list = []
+        for award in awards:
+            awards_list.append({
+                'Award': award[1],
+                'Player': award[2],
+                'League': award[4]
+            })
+        awards_df = pd.DataFrame(awards_list)
+        st.dataframe(awards_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No awards found.")
 
-# ==================== FOOTER ====================
+# Footer
 st.divider()
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.caption("✅ Football Stats Explorer")
-
-with col2:
-    st.caption("Built with Python + Streamlit")
-
-with col3:
-    st.caption("© 2024 Bootcamp Project")
+st.write("*Data from Football Stats Explorer • Updated: 2024*")
